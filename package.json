@@ -1,4 +1,9 @@
 {
   "name": "regenesis",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "dependencies": {
+    "soap": ">= 0.2.7",
+    "cheerio": ">= 0.10.7",
+    "underscore": ">= 1.4.4"
+  }
 }

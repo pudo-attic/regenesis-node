@@ -1,15 +1,24 @@
 _ = require 'underscore'
 cheerio = require 'cheerio'
 
+util = require 'util'
+dumpvar = (o) ->
+  console.log util.inspect o, true, null, true
 
-class TableMetadata
 
-  constructor: (@strukturInformation) ->
+class Table
+
+  constructor: (result) ->
+    @strukturInformation = result.strukturInformation
+    dumpvar @strukturInformation
+    @doc = cheerio.load result.tabellenDaten
     @headerOffset = parseInt @strukturInformation.tabellenLayout.zeilenueberschriftenAnzahl
+    @totalColumns = parseInt @strukturInformation.tabellenLayout.kopfspaltenAnzahl
     @metadata = @flattenStructure @strukturInformation.tabellenKopf.tabellenKopf
     @columnHeaders = @flattenStructure @strukturInformation.kopfZeile.kopfZeile
     @rowHeaders = @flattenStructure @strukturInformation.vorSpalte.vorSpalte
-    @dimensions = @metadata.concat(@columnHeaders).concat(@rowHeaders)
+    @intraHeaders = @flattenStructure @strukturInformation.zwischenTitel.zwischenTitel
+    @dimensions = @metadata.concat(@columnHeaders).concat(@rowHeaders).concat(@intraHeaders)
     @measures = _.filter @dimensions, (d) ->
       return d.typ is 'W'
 
@@ -38,27 +47,23 @@ class TableMetadata
       row: parseInt row
       col: parseInt col
 
-  interpretLocation: (loc) ->
+  interpretLocation: (loc, $el) ->
     coords = @parseLocation loc
     columnHeader = @columnHeaders[coords.row - @headerOffset - 1]
     if columnHeader?
       return columnHeader
+    colspan = parseInt $el.attr('colspan')
+    console.log colspan
     rowHeader = @rowHeaders[coords.col - 1]
     if rowHeader?
       return rowHeader
 
-
-class Table
-
-  constructor: (result) ->
-    @meta = new TableMetadata result.strukturInformation
-    @doc = cheerio.load result.tabellenDaten
-
   resolveLocation: (loc) ->
-    dimension = @meta.interpretLocation loc
+    $el = @doc('#' + loc)
+    dimension = @interpretLocation loc, $el
     if not dimension? or dimension.typ is 'W'
       return
-    dimension.value = @doc('#' + loc).text()
+    dimension.value = $el.text()
     return dimension
 
   facts: () -> # reconstruct individual facts
@@ -72,10 +77,10 @@ class Table
         res = self.resolveLocation loc
         if res?
           current[res.name] = res.value or res.titel
-      measure = self.meta.measures[measureIdx]
+      measure = self.measures[measureIdx]
       current[measure.name] = obj.text()
       measureIdx++
-      if measureIdx is self.meta.measures.length
+      if measureIdx is self.measures.length
         facts.push current
         current = {}
         measureIdx = 0

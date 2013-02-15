@@ -42,3 +42,20 @@ exports.getTable = (config, callback, name, start='', end='') ->
       client.ExportService_2010Service.ExportService_2010.TabellenExport opts, (err, result) ->
         table = new table_model.Table result.TabellenExportReturn.tabellen.tabellen
         callback table
+
+
+exports.getTableList = (config, callback, name) ->
+    getClient config.recherche_wsdl, (client) ->
+      #for prefix in [0..9]
+      opts =
+        kennung: config.user
+        passwort: config.password
+        filter: "*"
+        bereich: "Alle"
+        listenLaenge: 500
+        sprache: "de"
+      client.RechercheService_2010Service.RechercheService_2010.TabellenKatalog opts, (err, result) ->
+        console.log result
+
+
+

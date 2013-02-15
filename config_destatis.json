@@ -1,5 +1,6 @@
 {
   "user": "GK105862",
   "password": "roFl0815",
-  "export_wsdl": "https://www-genesis.destatis.de/genesisWS/services/ExportService_2010?wsdl"
+  "export_wsdl": "https://www-genesis.destatis.de/genesisWS/services/ExportService_2010?wsdl",
+  "recherche_wsdl": "https://www-genesis.destatis.de/genesisWS/services/RechercheService_2010?wsdl"
 }

@@ -11,7 +11,8 @@ class Table
   constructor: (result) ->
     @strukturInformation = result.strukturInformation
     dumpvar @strukturInformation
-    @doc = cheerio.load result.tabellenDaten
+    text = result.tabellenDaten.replace /"(\w*(="|>))/g, '" $1'
+    @doc = cheerio.load text
     @headerOffset = parseInt @strukturInformation.tabellenLayout.zeilenueberschriftenAnzahl
     @totalColumns = parseInt @strukturInformation.tabellenLayout.kopfspaltenAnzahl
     @metadata = @flattenStructure @strukturInformation.tabellenKopf.tabellenKopf
@@ -21,6 +22,7 @@ class Table
     @dimensions = @metadata.concat(@columnHeaders).concat(@rowHeaders).concat(@intraHeaders)
     @measures = _.filter @dimensions, (d) ->
       return d.typ is 'W'
+    @locations = {}
 
   flattenStructure: (obj) ->
     dims = []
@@ -53,17 +55,22 @@ class Table
     if columnHeader?
       return columnHeader
     colspan = parseInt $el.attr('colspan')
-    console.log colspan
+    if colspan is @totalColumns and @intraHeaders?
+      return @intraHeaders[0]
     rowHeader = @rowHeaders[coords.col - 1]
     if rowHeader?
       return rowHeader
 
   resolveLocation: (loc) ->
+    if @locations[loc]
+      return @locations[loc]
     $el = @doc('#' + loc)
     dimension = @interpretLocation loc, $el
     if not dimension? or dimension.typ is 'W'
+      @locations[loc] = null
       return
     dimension.value = $el.text()
+    @locations[loc] = dimension
     return dimension
 
   facts: () -> # reconstruct individual facts

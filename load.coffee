@@ -1,8 +1,10 @@
 assert = require 'assert'
 fs = require 'fs'
 util = require 'util'
+events = require 'events'
 
 client = require './lib/client'
+cube = require './cube'
 
 dumpvar = (o) ->
   console.log util.inspect o, true, null, true
@@ -12,20 +14,34 @@ init = () ->
   config = fs.readFileSync process.env.REGENESIS_SETTINGS
   config = JSON.parse config.toString()
   handleTable = (table) ->
-    dumpvar table.facts()
+    dumpvar table
 
-  # Schlachttabelle: 
-  #client.getTable config, handleTable, '41331-0002'
+  #cube.fetchCube config, '11111KJ001'
+  #cube.fetchCube config, '12613BJ003', (cube) ->
+  #  fs.writeFileSync "export/cube_#{ cube.metadata.name }.json", JSON.stringify(cube)
+  #
+  exportJSONDatasets config
 
-  # Erwerbstaetige:
-  client.getTable config, handleTable, '13311-0002'
-  
+exportJSONDatasets = (config) ->
+  ee = new events.EventEmitter()
+  datasets = []
+  saveDataset = (dataset_desc) ->
+    datasets.push(dataset_desc)
 
-  #client.getDataset config, handleTable, '61111BM001'
-  
-  #exportJSON config
+  fetchDataset = () ->
+    dataset_desc = datasets.pop()
+    console.info "Fetching: #{ dataset_desc.beschriftungstext }"
+    handleDataset = (data) ->
+      fs.writeFileSync "export/#{ data.metadata.name }.json", JSON.stringify(data, null, '  ')
+      if datasets.length > 0
+        f = () -> fetchDataset()
+        setTimeout(f, 20)
+    cube.fetchCube config, dataset_desc.code, handleDataset
 
-exportJSON = (config) ->
+  client.getDatasetList config, saveDataset, fetchDataset
+
+
+exportJSONTables = (config) ->
   tables = []
   saveTable = (table_desc) ->
     tables.push(table_desc)
@@ -45,6 +61,5 @@ exportJSON = (config) ->
     client.getTable(config, handleTable, table_desc.code, 1900)
 
   client.getTableList config, saveTable, fetchTable
-    
 
 init()
